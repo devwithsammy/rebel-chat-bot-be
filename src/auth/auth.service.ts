@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
@@ -37,5 +37,27 @@ export class AuthService {
       user,
       token,
     };
+  }
+  async getProfile(userId: string): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return {
+      id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      picture: user.picture,
+      googleId: user.googleId,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+  async validateToken(token: string) {
+    try {
+      return this.jwtService.verify(token);
+    } catch (err) {
+      throw new Error('Invalid token');
+    }
   }
 }
