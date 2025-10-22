@@ -60,15 +60,12 @@ export class ConversationController {
       userId,
       conversationId,
     );
-    console.log('Conversation context:', messages);
 
     // Prepare context for OpenRouter
     const formattedMessages = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
-
-    console.log('Formatted messages for OpenRouter:', formattedMessages);
 
     // Call OpenRouter API
     const openRouterKey =
@@ -87,12 +84,12 @@ export class ConversationController {
         }),
       },
     );
-    console.log('OpenRouter response:', response);
+
     if (!response.ok) {
       throw new Error(`OpenRouter API error: ${response.statusText}`);
     }
     const result = (await response.json()) as IOpenRouterResponse;
-    console.log('OpenRouter result:', result);
+
     const assistantReply = result?.choices?.[0]?.message?.content || '...';
     const updatedConversation = await this.conversationService.appendMessage(
       userId,
