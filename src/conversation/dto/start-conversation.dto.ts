@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class StartConversationDto {
   @IsString()
@@ -7,5 +7,6 @@ export class StartConversationDto {
   prompt: string;
 
   @IsString()
+  @IsOptional()
   conversationId?: string;
 }

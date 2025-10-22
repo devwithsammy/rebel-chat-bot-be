@@ -55,17 +55,18 @@ export class ConversationService {
   async getUserConversations(userId: string) {
     return this.conversationModel
       .find({ userId })
-      .select('conversationId createdAt updatedAt')
+      .select('conversationId createdAt updatedAt messages')
       .sort({ updatedAt: -1 })
       .lean()
       .then((list) =>
         list.map((c) => ({
           conversationId: c.conversationId,
-          lastUserMessage: c.messages.filter((m) => m.role === 'user').pop()
-            ?.content,
-          lastAssistantMessage: c.messages
-            .filter((m) => m.role === 'assistant')
-            .pop()?.content,
+          lastUserMessage:
+            c.messages?.filter((m) => m.role === 'user').pop()?.content || null,
+          lastAssistantMessage:
+            c.messages?.filter((m) => m.role === 'assistant').pop()?.content ||
+            null,
+          createdAt: c.createdAt,
           updatedAt: c.updatedAt,
         })),
       );
