@@ -1,40 +1,66 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
   Req,
-  Patch,
-  Param,
-  Delete,
   UseGuards,
+  BadRequestException,
+  UnauthorizedException,
+  Get,
+  Param,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
 import { JWTAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import type { IAuthenticatedRequest } from 'src/common/types/authenticated-request.interface';
+import { ConfigService } from '@nestjs/config';
+import { IOpenRouterResponse } from 'src/common/types/openRouter.interface';
+import { StartConversationDto } from './dto/start-conversation.dto';
 
 @Controller('conversation')
+@UseGuards(JWTAuthGuard)
 export class ConversationController {
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly conversationService: ConversationService,
+  ) {}
 
   @Post()
-  @UseGuards(JWTAuthGuard)
   async sendMessage(
     @Body()
-    body: {
-      prompt: string;
-    },
+    body: StartConversationDto,
     @Req() req: IAuthenticatedRequest,
   ) {
     const userId = req?.user?.userId;
     if (!userId) {
-      throw new Error('User ID not found in request');
+      throw new UnauthorizedException('User not authenticated.');
     }
-    await this.conversationService.appendMessage(userId, 'user', body.prompt);
 
-    const messages =
-      await this.conversationService.getConversationContext(userId);
+    const prompt = body?.prompt;
+    if (!prompt || prompt.trim().length === 0) {
+      throw new BadRequestException('Prompt cannot be empty.');
+    }
+
+    let conversationId = body?.conversationId;
+    if (!conversationId) {
+      const newConversation =
+        await this.conversationService.createConversation(userId);
+      conversationId = newConversation.conversationId;
+    }
+
+    // append user message to conversation
+    await this.conversationService.appendMessage(
+      userId,
+      conversationId,
+      'user',
+      prompt,
+    );
+
+    const messages = await this.conversationService.getConversationContext(
+      userId,
+      conversationId,
+    );
+    console.log('Conversation context:', messages);
 
     // Prepare context for OpenRouter
     const formattedMessages = messages.map((m) => ({
@@ -42,13 +68,17 @@ export class ConversationController {
       content: m.content,
     }));
 
+    console.log('Formatted messages for OpenRouter:', formattedMessages);
+
     // Call OpenRouter API
+    const openRouterKey =
+      this.configService.get<string>('OPENROUTER_KEY') || '';
     const response = await fetch(
       'https://openrouter.ai/api/v1/chat/completions',
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
+          Authorization: `Bearer ${openRouterKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -57,17 +87,49 @@ export class ConversationController {
         }),
       },
     );
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const result = await response.json();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    console.log('OpenRouter response:', response);
+    if (!response.ok) {
+      throw new Error(`OpenRouter API error: ${response.statusText}`);
+    }
+    const result = (await response.json()) as IOpenRouterResponse;
+    console.log('OpenRouter result:', result);
     const assistantReply = result?.choices?.[0]?.message?.content || '...';
-    await this.conversationService.appendMessage(
+    const updatedConversation = await this.conversationService.appendMessage(
       userId,
+      conversationId,
       'assistant',
       assistantReply,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    return { reply: assistantReply };
+
+    return {
+      conversationId: updatedConversation.conversationId,
+      reply: assistantReply,
+      context: updatedConversation.messages,
+    };
+  }
+
+  @Get('user')
+  async getUserConversations(@Req() req: IAuthenticatedRequest) {
+    const userId = req?.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    const conversations =
+      await this.conversationService.getUserConversations(userId);
+    return conversations;
+  }
+  @Get(':conversationId')
+  async getConversationMessages(
+    @Param('conversationId') conversationId: string,
+    @Req() req: IAuthenticatedRequest,
+  ) {
+    const userId = req?.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    return this.conversationService.getConversationContext(
+      userId,
+      conversationId,
+    );
   }
 }
