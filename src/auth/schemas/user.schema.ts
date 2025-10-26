@@ -24,7 +24,8 @@ export class User extends Document {
     default: 'user',
   })
   role?: TUserRole;
-  picture: string;
+  @Prop()
+  picture?: string;
   @Prop()
   googleId: string;
   createdAt?: Date;

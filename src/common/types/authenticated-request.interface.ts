@@ -8,3 +8,10 @@ export interface IAuthenticatedRequest extends Request {
     role?: TUserRole;
   };
 }
+
+export interface IGoogleAuthRequest extends Request {
+  user?: {
+    user: Record<string, any>;
+    token: string;
+  };
+}
