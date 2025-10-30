@@ -1,98 +1,259 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Rebel Chat Bot API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
+This is the backend API for the Rebel Chat Bot, built with NestJS and TypeScript. It leverages Mongoose for MongoDB database interactions and Passport.js for handling authentication via JWT and Google OAuth.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
+- **NestJS**: A progressive Node.js framework for building efficient, reliable and scalable server-side applications.
+- **Mongoose**: An Object Data Modeling (ODM) library for MongoDB, providing a schema-based solution to model application data.
+- **Passport.js**: Authentication middleware implementing Google OAuth 2.0 and JSON Web Token (JWT) strategies for secure access.
+- **OpenRouter AI**: Integrates with the OpenRouter API to provide generative AI chat completions.
+- **Class-Validator**: Decorator-based validation to ensure incoming request data is well-formed.
+- **Security**: Implements `helmet` for protection against common web vulnerabilities, `express-mongo-sanitize` to prevent NoSQL injection, and `@nestjs/throttler` for rate limiting.
 
-## Description
+## Getting Started
+### Installation
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/devwithsammy/rebel-chat-bot-be.git
+    cd rebel-chat-bot-be
+    ```
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-## Project setup
+3.  **Set up environment variables**
+    Create a `.env` file in the root directory and add the variables listed below.
 
-```bash
-$ npm install
+4.  **Run the development server**
+    ```bash
+    npm run dev
+    ```
+    The server will be running on `http://localhost:5000` (or the port specified in your `.env` file).
+
+### Environment Variables
+You must create a `.env` file in the root of the project and populate it with the following variables:
+
+```env
+# Application Configuration
+NODE_ENV=development
+PORT=5000
+FRONTEND_URL=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000,http://your-production-frontend.com
+
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net
+DB_USER=your_db_username
+DB_PASS=your_db_password
+
+# JWT Authentication
+JWT_SECRET=your_super_secret_jwt_key
+JWT_EXPIRES_IN=30d
+
+# Google OAuth 2.0 Credentials
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/v1/auth/google/redirect
+
+# OpenRouter AI
+OPENROUTER_KEY=your_openrouter_api_key
 ```
 
-## Compile and run the project
+## API Documentation
+### Base URL
+`/api/v1`
 
-```bash
-# development
-$ npm run start
+### Endpoints
+#### GET /ping
+**Description**: Checks the health of the API server.
 
-# watch mode
-$ npm run start:dev
+**Request**:
+No payload required.
 
-# production mode
-$ npm run start:prod
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Server running"
+}
 ```
 
-## Run tests
+**Errors**:
+- N/A
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+#### GET /auth/google
+**Description**: Initiates the Google OAuth 2.0 authentication flow. This endpoint redirects the user to the Google login page.
 
-# test coverage
-$ npm run test:cov
+**Request**:
+No payload required.
+
+**Response**:
+- A redirect to the Google authentication screen.
+
+**Errors**:
+- N/A
+
+---
+
+#### GET /auth/google/redirect
+**Description**: Handles the callback from Google after successful authentication. It creates or validates the user, generates a JWT, and redirects to the frontend with the token.
+
+**Request**:
+Google provides the authorization code in the query parameters.
+
+**Response**:
+- A redirect to the `FRONTEND_URL` specified in the environment variables, with the token and user data as query parameters.
+  `[FRONTEND_URL]/auth/callback?token=[JWT]&user=[ENCODED_USER_JSON]&message=login_success`
+
+**Errors**:
+- A redirect to `[FRONTEND_URL]/login?error=no_user` if Google does not provide user information.
+
+---
+
+#### GET /auth/profile
+**Description**: Retrieves the profile of the currently authenticated user. Requires a valid JWT.
+
+**Request**:
+**Headers**:
+- `Authorization`: `Bearer <your_jwt_token>`
+
+No payload required.
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "User profile",
+    "data": {
+        "id": "60d0fe4f5311236168a109ca",
+        "email": "user@example.com",
+        "firstName": "John",
+        "picture": "https://lh3.googleusercontent.com/a-/AOh14Gj...=",
+        "googleId": "109876543210987654321",
+        "createdAt": "2023-10-27T10:00:00.000Z",
+        "updatedAt": "2023-10-27T10:00:00.000Z"
+    }
+}
 ```
 
-## Deployment
+**Errors**:
+- `401 Unauthorized`: If the JWT is missing or invalid.
+- `404 Not Found`: If the user associated with the token cannot be found.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+#### POST /conversation
+**Description**: Starts a new chat conversation or continues an existing one. If `conversationId` is omitted, a new conversation is created. Requires a valid JWT.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+**Request**:
+**Headers**:
+- `Authorization`: `Bearer <your_jwt_token>`
+
+**Payload**:
+```json
+{
+  "prompt": "Hello, what can you do?",
+  "conversationId": "optional-uuid-for-existing-conversation"
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Response**:
+```json
+{
+    "conversationId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "reply": "I am an AI assistant. I can help you with a variety of tasks!",
+    "context": [
+        {
+            "role": "user",
+            "content": "Hello, what can you do?",
+            "timestamp": "2023-10-27T10:05:00.000Z",
+            "_id": "..."
+        },
+        {
+            "role": "assistant",
+            "content": "I am an AI assistant. I can help you with a variety of tasks!",
+            "timestamp": "2023-10-27T10:05:01.000Z",
+            "_id": "..."
+        }
+    ]
+}
+```
 
-## Resources
+**Errors**:
+- `400 Bad Request`: If the `prompt` is empty or validation fails.
+- `401 Unauthorized`: If the JWT is missing or invalid.
+- `500 Internal Server Error`: If the OpenRouter API call fails.
 
-Check out a few resources that may come in handy when working with NestJS:
+---
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+#### GET /conversation/user
+**Description**: Fetches a list of all conversations for the authenticated user, showing a summary of each. Requires a valid JWT.
 
-## Support
+**Request**:
+**Headers**:
+- `Authorization`: `Bearer <your_jwt_token>`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+No payload required.
 
-## Stay in touch
+**Response**:
+```json
+[
+    {
+        "conversationId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "lastUserMessage": "What's the weather like today?",
+        "lastAssistantMessage": "I'm sorry, I cannot provide real-time weather information.",
+        "createdAt": "2023-10-27T10:00:00.000Z",
+        "updatedAt": "2023-10-27T10:15:00.000Z"
+    },
+    {
+        "conversationId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+        "lastUserMessage": "Hello there.",
+        "lastAssistantMessage": "Hi! How can I help you today?",
+        "createdAt": "2023-10-26T08:00:00.000Z",
+        "updatedAt": "2023-10-26T08:05:00.000Z"
+    }
+]
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**Errors**:
+- `401 Unauthorized`: If the JWT is missing or invalid.
 
-## License
+---
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+#### GET /conversation/:conversationId
+**Description**: Retrieves the full message history for a specific conversation. Requires a valid JWT.
+
+**Request**:
+**Headers**:
+- `Authorization`: `Bearer <your_jwt_token>`
+
+**Path Parameters**:
+- `conversationId`: The unique identifier of the conversation.
+
+No payload required.
+
+**Response**:
+```json
+[
+    {
+        "role": "user",
+        "content": "Hello there.",
+        "timestamp": "2023-10-26T08:00:00.000Z",
+        "_id": "..."
+    },
+    {
+        "role": "assistant",
+        "content": "Hi! How can I help you today?",
+        "timestamp": "2023-10-26T08:00:01.000Z",
+        "_id": "..."
+    }
+]
+```
+
+**Errors**:
+- `400 Bad Request`: If the conversation is not found.
+- `401 Unauthorized`: If the JWT is missing or invalid, or if the user does not own the conversation.
