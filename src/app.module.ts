@@ -2,7 +2,7 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConversationModule } from './conversation/conversation.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
@@ -28,7 +28,33 @@ import Joi from 'joi';
           .valid('development', 'production', 'preproduction'),
       }),
     }),
-    MongooseModule.forRoot(process.env.MONGODB_URI ?? ''),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        let baseUri = configService.get<string>('MONGODB_URI');
+        const dbUser = configService.get<string>('DB_USER');
+        const dbUserPass = configService.get<string>('DB_PASS');
+        const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+
+        if (!(baseUri && dbUser && dbUserPass && nodeEnv)) {
+          throw new Error('❌ ENV varibles not set to connect to MONGODB.');
+        }
+
+        baseUri = baseUri.replace('<password>', dbUserPass);
+        baseUri = baseUri.replace('<user>', dbUser);
+        const envSuffix =
+          nodeEnv === 'production' ? '/production' : '/development';
+
+        const mongoUri = `${baseUri}${envSuffix}`;
+
+        console.log(`✅ Connecting to MongoDB in ${envSuffix}  environment`);
+
+        return {
+          uri: mongoUri,
+        };
+      },
+    }),
     AuthModule,
     ConversationModule,
   ],
