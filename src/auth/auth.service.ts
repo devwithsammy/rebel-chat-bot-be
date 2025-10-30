@@ -66,6 +66,7 @@ export class AuthService {
   async validateToken(token: string) {
     try {
       return this.jwtService.verify(token);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       throw new Error('Invalid token');
     }
