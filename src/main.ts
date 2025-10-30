@@ -1,12 +1,38 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
-
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import { NextFunction, Request, Response } from 'express';
+import express from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
   const configService = app.get(ConfigService);
+  const logger = new Logger('APP-START');
+
+  app.use(express.json());
+  //   security middleware
+  app.use(((req, res, next) => {
+    if (req.body) mongoSanitize.sanitize(req.body);
+    if (req.params) mongoSanitize.sanitize(req.params);
+
+    if (req.query) {
+      for (const key in req.query) {
+        if (key.startsWith('$')) {
+          console.warn(`Sanitized query key: ${key}`);
+          delete req.query[key];
+        }
+      }
+    }
+
+    next();
+  }) as (req: Request, res: Response, next: NextFunction) => void);
+
+  app.use(helmet());
+  app.use(helmet.hidePoweredBy()); // Hide NestJS signature
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -28,7 +54,7 @@ async function bootstrap() {
     (configService.get<string>('CORS_ORIGINS')?.split(',') as string[]) || [];
   app.enableCors({
     origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: [
       'Origin',
       'X-Requested-With',
@@ -42,6 +68,6 @@ async function bootstrap() {
 
   const PORT = process.env.PORT || 5000;
   await app.listen(PORT);
-  console.log(`Server started at port ${PORT} ✅`);
+  logger.log(`Server started at port ${PORT} ✅`);
 }
 bootstrap();

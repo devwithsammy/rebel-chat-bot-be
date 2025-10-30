@@ -14,7 +14,6 @@ import { JWTAuthGuard } from './guards/jwt-auth.guard';
   controllers: [AuthController],
   providers: [AuthService, GoogleStrategy, JWtStrategy, JWTAuthGuard],
   imports: [
-    ConfigModule.forRoot(),
     PassportModule.register({
       session: false,
     }),
@@ -30,7 +29,7 @@ import { JWTAuthGuard } from './guards/jwt-auth.guard';
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: (process.env.JWT_EXPIRES_IN ||
-            '7d') as JwtSignOptions['expiresIn'],
+            '30d') as JwtSignOptions['expiresIn'],
         },
       }),
       inject: [ConfigService],
